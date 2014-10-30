@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>ESB - GeoLoc</title>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name = "viewport" content = "text/html; width = device-width; initial-scale=1.0; maximum-scale=1.0; user-scalable=no; charset=utf-8"/>
+	<style>
+          html, body, #mapa 
+	  {
+           width: 600px;
+           height: 400px;
+		   margin-top: 10px;
+      	  }
+
+    	</style>	
+	<script src="js/jquery-1.9.1.min.js" type="text/javascript"></script>   
+	<!--<script src="https://maps.googleapis.com/maps/api/js?v=3.exp&sensor=true"></script> -->
+    <script src="https://maps.googleapis.com/maps/api/js?v=3.exp"></script>
+	<script type="text/javascript">
+	    
+		/*LEEME: AQUI RECOPILO MIS PRUEBAS. LA IDEA ES PODER IR DEJANDO UN RASTRO DE MARCADORES
+				 UNIDOS ENTRE SI Y QUE MEDIANTE UN BOTON "BORRAR" PUEDA ELIMINAR TODOS LOS MARCADORES.
+		*/
+		
+		$(document).ready(function() {
+			// If the browser supports the Geolocation API
+			if (typeof navigator.geolocation == "undefined") {
+				$("#error").text("Your browser doesn't support the Geolocation API");
+				return;
+			}
+			
+			$("#start").click(function(){ getLocationSeguimiento() });
+			$("#stop").click(function(){ stopWatch() });
+			$("#borrar").click(function() { borrarMarkers() });
+        
+			// Variable en la que almacenaremos el histórico de posiciones.
+			var path = [];
+			
+			function getLocationSeguimiento() {
+				if (navigator.geolocation) {	
+					var optionsWatch = {
+						enableHighAccuracy: true,
+						timeout: 10000,
+						maximumAge: 0
+					};
+					watchID=navigator.geolocation.watchPosition(showPositionSeguimiento,showError,optionsWatch);
+				} else {
+					$("#demo").html("Este navegador no soporta la Geolocalización.");
+				}
+			}
+			
+			function showPositionSeguimiento(position) {
+
+				//Guardamos en "path" la posición actual
+				path.push(new google.maps.LatLng(position.coords.latitude, position.coords.longitude));
+
+				//Escribimos en #demo las coordenadas Longitud y Latitud.
+				//$("#demo").html("<b>Latitud:</b> " + position.coords.latitude + "<br><b>Longitud:</b> " + position.coords.longitude + "<br><b>TimeStamp: </b>" + new Date(position.timestamp));   
+				
+				//Para sacar todo el listado de coordenadas:
+				$("#coordenadas").append(position.coords.latitude + "," + position.coords.longitude + "<br>");  
+						         
+
+				<!-- Mostramos en mapa centrado en center: path[0]-->
+				//var coords = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
+				var options = {
+						zoom: 17,
+						//center: coords,
+						center: path[0],
+						mapTypeControl: false,
+						navigationControlOptions: {
+							style: google.maps.NavigationControlStyle.SMALL
+						},
+						mapTypeId: google.maps.MapTypeId.ROADMAP
+				};
+
+				var map = new google.maps.Map(document.getElementById("mapa"), options);
+				
+				  /*
+				  var marker = new google.maps.Marker({
+					  position: coords,
+					  map: map,
+					  title:"You are here!"
+				  });
+				  */
+			    
+			    /*
+			    // Create the polyline's points
+	        	for(var i = 0; i < 5; i++) {
+	            // Create a random point using the user current position and a random generated number.
+	            // The number will be once positive and once negative using based on the parity of i
+	            // and to reduce the range the number is divided by 10
+	            	path.push(
+	              		new google.maps.LatLng(
+	                	position.coords.latitude + (Math.random() / 10 * ((i % 2) ? 1 : -1)),
+	                	position.coords.longitude + (Math.random() / 10 * ((i % 2) ? 1 : -1))
+	              		)
+	            	);
+	        	}
+				*/
+
+		        // Create the array that will be used to fit the view to the points range and
+		        // place the markers to the polyline's points
+		        var latLngBounds = new google.maps.LatLngBounds();
+
+		        for(var i = 0; i < path.length; i++) {
+		            latLngBounds.extend(path[i]);
+		            // Place the marker
+		            new google.maps.Marker({
+		              map: map,
+		              position: path[i],
+		              title: "Point " + (i + 1)
+		            });
+		        }
+	        
+		        // Creates the polyline object
+		        var polyline = new google.maps.Polyline({
+		            map: map,
+		            path: path,
+		            strokeColor: '#0000FF',
+		            strokeOpacity: 0.7,
+		            strokeWeight: 1
+		        });
+		        
+		        // Fit the bounds of the generated points
+		        map.fitBounds(latLngBounds);
+
+			}
+			
+			function stopWatch() {
+				if (watchID != null) {
+					navigator.geolocation.clearWatch(watchID);
+					watchID = null;
+				}
+			}
+
+			function borrarMarkers() {
+				for (var i = 0; i < path.length; i++ ) {
+    				path[i].setMap(null);
+  				}
+  				path = [];
+			}
+			
+			function showError(error) {
+				switch(error.code) {
+					case error.PERMISSION_DENIED:
+						$("#demo").html("User denied the request for Geolocation.");
+						break;
+					case error.POSITION_UNAVAILABLE:
+						$("#demo").html("Location information is unavailable.");
+						break;
+					case error.TIMEOUT:
+						$("#demo").html("The request to get user location timed out.");
+						break;
+					case error.UNKNOWN_ERROR:
+						$("#demo").html("An unknown error occurred.");
+						break;
+				}
+			}
+			
+		}); //Fin de $(document).ready
+		
+	</script>
+</head>
+<body>
+	<p id="demo">Pulsa <b>Start</b> para empezar el "tracking":</p>
+	<p id="coordenadas"></p>
+	<button id="start">Start</button>
+	<button id="stop">Stop</button>
+	<button id="borrar">Borrar</button>
+	<div id="mapa"></div>
+</body>
+</html>

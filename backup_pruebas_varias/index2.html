@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>ESB - GeoLoc</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <meta name = "viewport" content = "text/html; width = device-width; initial-scale=1.0; maximum-scale=1.0; user-scalable=no; charset=utf-8"/>
+  <style>
+    html, body {
+      height: 100%;
+    }
+
+    #map-canvas {
+    height:500px;
+    width:500px;
+    }
+  </style>  
+  <script src="js/jquery-1.9.1.min.js" type="text/javascript"></script>   
+  <!--<script src="https://maps.googleapis.com/maps/api/js?v=3.exp&sensor=true"></script> -->
+    <script src="https://maps.googleapis.com/maps/api/js?v=3.exp"></script>
+  <script type="text/javascript">
+    var map;
+    var path;
+    var marker;
+
+    function initialize() {
+      var myLatlng = new google.maps.LatLng(43.326385, -3.008982);
+      var myOptions = {
+        zoom: 17,
+        center: myLatlng,
+        mapTypeId: google.maps.MapTypeId.ROADMAP
+      }
+
+      map = new google.maps.Map(document.getElementById("map-canvas"), myOptions);
+        
+       route = new google.maps.Polyline({
+        path: [
+          new google.maps.LatLng(43.326385, -3.008982),
+          new google.maps.LatLng(43.326569, -3.009170),
+          new google.maps.LatLng(43.326709, -3.009363),
+          new google.maps.LatLng(43.326826, -3.009524),
+          new google.maps.LatLng(43.326932, -3.009583),
+          new google.maps.LatLng(43.327029, -3.009438)
+          ],
+        map:map
+      });
+        
+      // Define the symbol, using one of the predefined paths ('CIRCLE')
+      // supplied by the Google Maps JavaScript API.
+      var lineSymbol = {
+        path: google.maps.SymbolPath.CIRCLE,
+        scale: 8,
+        strokeColor: '#393'
+      };
+
+      marker = new google.maps.Marker({
+        position: new google.maps.LatLng(43.326385, -3.008982),
+        map: map
+      });
+      
+      counter = 0;
+      interval = window.setInterval(function() { 
+        counter++;
+         var pos = new google.maps.LatLng(43.326385, -3.008982 + counter / 100);
+        marker.setPosition(pos);
+        if (counter >= 1000) {
+          window.clearInterval(interval);   
+        }
+      }, 1);
+
+    }    
+        
+    google.maps.event.addDomListener(window, 'load', initialize);
+    
+  </script>
+</head>
+<body>
+  <div id="map-canvas"></div>
+</body>
+</html>

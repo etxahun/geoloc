@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
+    <meta charset="utf-8">
+    <title>Nextel SimuLoc</title>
+    <style>
+
+      #map-canvas {
+        width: 850px;
+        height: 580px;
+        margin-left: 5px;
+      }
+
+      .left {
+        width: 870px;
+        height: 580px;
+        /*background-color: blue;*/
+        float: left;
+      }
+
+      .right {
+        width: 370px;
+        height: 580px;
+        /*background-color: #315181;*/
+        padding-left: 20px;
+        float: right;
+        border-left: 2px solid #000;
+      }
+
+      .button {
+        font-weight: bold;
+        width: 80px;
+        height: 30px;
+        border-radius: 10px;
+        margin-left: 100px;
+      }
+
+      #edificioA {
+        font-weight: bold;
+        width: 80px;
+        height: 30px;
+        border-radius: 10px; 
+        background-color: #99E287;
+        margin-left: 60px;
+      }
+
+      #edificioB {
+        font-weight: bold;
+        width: 80px;
+        height: 30px;
+        border-radius: 10px; 
+        background-color: #6495ED;
+      }
+
+    </style>
+    <script src="js/jquery-1.9.1.min.js" type="text/javascript"></script>   
+    <!--<script src="https://maps.googleapis.com/maps/api/js?v=3.exp"></script>-->
+    <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&libraries=geometry"></script>
+    <script>
+
+      $(document).ready(function() {
+
+        // If the browser supports the Geolocation API
+        if (typeof navigator.geolocation == "undefined") {
+          $("#error").text("Your browser doesn't support the Geolocation API");
+          return;
+        }
+
+        //Mostramos el mapa y el marcador inicial
+        initialize();
+
+        $("#divStart").hide();
+        $("#coordenadas").hide();
+        $("#startA").hide(); 
+        $("#startB").hide();
+        $("#volver").hide();       
+        
+        $("#startA").click(function(){ animateCircleA() });
+        $("#startB").click(function(){ animateCircleB() });
+
+        $("#edificioA").click(function() { muestraEdifA() });
+        $("#edificioB").click(function() { muestraEdifB() });
+
+        $("#volver").click(function() { volver() });
+
+        var line;
+        var map;
+        var infoWindow;
+        var edifA;
+        var edifB;
+        var contentString;
+        var edifAcoords;
+        var edifBcoords;
+        var basurtoOverlay;
+
+        var pointDistances;
+        var id;
+
+        function initialize() {
+          var mapOptions = {
+            //center: new google.maps.LatLng(43.261903, -2.952965),
+            center: new google.maps.LatLng(43.2616,-2.952634),
+            zoom: 17,
+            mapTypeId: google.maps.MapTypeId.ROADMAP
+          };
+
+          map = new google.maps.Map(document.getElementById('map-canvas'), mapOptions);
+      
+          var image = 'images/male-2.png';
+          marker = new google.maps.Marker({
+              position: new google.maps.LatLng(43.260630, -2.954124),
+              map: map,
+              icon: image,
+          });
+
+          //Superponemos la imágen del mapa del hospital
+          var pointSW = new google.maps.LatLng(43.260037,-2.955767);
+          var pointNE = new google.maps.LatLng(43.263022,-2.950788);
+
+          var groundOverlay = new google.maps.GroundOverlay("images/basurto43.png", 
+              new google.maps.LatLngBounds(pointSW, pointNE));
+          groundOverlay.setMap(map);
+
+
+          // InfoWindow marker entrada: "Entrada al Hospital de Basurto"
+          var infowindow = new google.maps.InfoWindow({
+            content: "Entrada al Hospital de Basurto"
+          });
+
+          google.maps.event.addListener(marker, 'click', function() {
+              infowindow.open(map,marker);
+          });
+
+          cargaEdificios();
+        }
+
+        function cargaEdificios() {
+
+            // Define the LatLng coordinates for the polygon "Edificio A".
+            edifAcoords = [
+                new google.maps.LatLng(43.262397, -2.955096),
+                new google.maps.LatLng(43.262663, -2.954731),
+                new google.maps.LatLng(43.262294, -2.954188),
+                new google.maps.LatLng(43.261998, -2.954634)             
+            ];
+
+            // Construct the polygon.
+            edifA = new google.maps.Polygon({
+              paths: edifAcoords,
+              strokeColor: '#00FF00',
+              strokeOpacity: 0.8,
+              strokeWeight: 3,
+              fillColor: '#00FF00',
+              fillOpacity: 0.35
+            });
+
+            //edifA.setMap(map);
+
+
+            // Define the LatLng coordinates for the polygon  "Edificio B".
+            edifBcoords = [
+                new google.maps.LatLng(43.261226, -2.952117),
+                new google.maps.LatLng(43.260905, -2.951580),
+                new google.maps.LatLng(43.260657, -2.951894),
+                new google.maps.LatLng(43.260985, -2.952440)              
+            ];
+
+            // Construct the polygon.
+            edifB = new google.maps.Polygon({
+              paths: edifBcoords,
+              strokeColor: '#0000FF',
+              strokeOpacity: 0.8,
+              strokeWeight: 3,
+              fillColor: '#0000FF',
+              fillOpacity: 0.35
+            });
+
+
+
+
+        }
+
+
+
+        function muestraEdifA() {
+
+          $("#divStart").show();
+          $("#startA").show();
+          $("#startB").hide();
+          $("#volver").hide();
+          //$("#edificioA").hide();
+          //$("#edificioB").show();
+
+          var mapOptions = {
+              zoom: 17,
+              center: new google.maps.LatLng(43.261903, -2.952965),
+              mapTypeId: google.maps.MapTypeId.ROADMAP
+            };
+
+
+            map = new google.maps.Map(document.getElementById('map-canvas'), mapOptions);
+
+            var image = 'images/male-2.png';
+            marker = new google.maps.Marker({
+                position: new google.maps.LatLng(43.260630, -2.954124),
+                map: map,
+                icon: image
+            });
+
+            // InfoWindow marker entrada: "Entrada al Hospital de Basurto"
+            var infowindow = new google.maps.InfoWindow({
+              content: "Entrada al Hospital de Basurto"
+            });
+
+            google.maps.event.addListener(marker, 'click', function() {
+                infowindow.open(map,marker);
+            });
+
+
+            // Define the LatLng coordinates for the polygon "Edificio A".
+            edifAcoords = [
+                new google.maps.LatLng(43.262397, -2.955096),
+                new google.maps.LatLng(43.262663, -2.954731),
+                new google.maps.LatLng(43.262294, -2.954188),
+                new google.maps.LatLng(43.261998, -2.954634)             
+            ];
+
+            // Construct the polygon.
+            edifA = new google.maps.Polygon({
+              paths: edifAcoords,
+              strokeColor: '#00FF00',
+              strokeOpacity: 0.8,
+              strokeWeight: 3,
+              fillColor: '#00FF00',
+              fillOpacity: 0.35
+            });
+
+            edifA.setMap(map);
+
+            //Superponemos la imágen del mapa del hospital
+            var pointSW = new google.maps.LatLng(43.260037,-2.955767);
+            var pointNE = new google.maps.LatLng(43.263022,-2.950788);
+
+            var groundOverlay = new google.maps.GroundOverlay("images/basurto43.png", 
+                new google.maps.LatLngBounds(pointSW, pointNE));
+            groundOverlay.setMap(map);
+
+
+            // Add a listener for the click event.
+            google.maps.event.addListener(edifA, 'click', showArrays);
+
+            infoWindow = new google.maps.InfoWindow();
+
+        }
+
+
+        function muestraEdifB() {
+
+          $("#divStart").show();
+          $("#startA").hide();
+          $("#startB").show();
+          $("#volver").hide();
+          //$("#edificioA").show();
+          //$("#edificioB").hide();
+
+          var mapOptions = {
+              zoom: 17,
+              center: new google.maps.LatLng(43.261903, -2.952965),
+              mapTypeId: google.maps.MapTypeId.ROADMAP
+            };
+
+            map = new google.maps.Map(document.getElementById('map-canvas'),mapOptions);
+
+            var image = 'images/male-2.png';
+            marker = new google.maps.Marker({
+                position: new google.maps.LatLng(43.260630, -2.954124),
+                map: map,
+                icon: image
+            });
+
+            // InfoWindow marker entrada: "Entrada al Hospital de Basurto"
+            var infowindow = new google.maps.InfoWindow({
+              content: "Entrada al Hospital de Basurto"
+            });
+
+            google.maps.event.addListener(marker, 'click', function() {
+                infowindow.open(map,marker);
+            });
+
+            // Define the LatLng coordinates for the polygon "Edificio B".
+            edifBcoords = [
+                new google.maps.LatLng(43.261226, -2.952117),
+                new google.maps.LatLng(43.260905, -2.951580),
+                new google.maps.LatLng(43.260657, -2.951894),
+                new google.maps.LatLng(43.260985, -2.952440)              
+            ];
+
+            // Construct the polygon.
+            edifB = new google.maps.Polygon({
+              paths: edifBcoords,
+              strokeColor: '#0000FF',
+              strokeOpacity: 0.8,
+              strokeWeight: 3,
+              fillColor: '#0000FF',
+              fillOpacity: 0.35
+            });
+
+            edifB.setMap(map);
+
+            //Superponemos la imágen del mapa del hospital
+            var pointSW = new google.maps.LatLng(43.260037,-2.955767);
+            var pointNE = new google.maps.LatLng(43.263022,-2.950788);
+
+            var groundOverlay = new google.maps.GroundOverlay("images/basurto43.png", 
+                new google.maps.LatLngBounds(pointSW, pointNE));
+            groundOverlay.setMap(map);
+
+
+            // Add a listener for the click event.
+            google.maps.event.addListener(edifB, 'click', showArrays);
+
+            infoWindow = new google.maps.InfoWindow();
+        }
+
+
+        function showArrays(event) {
+
+            // Since this polygon has only one path, we can call getPath()
+            // to return the MVCArray of LatLngs.
+            var vertices = this.getPath();
+
+            contentString = '<b>Edificio</b><br>';
+
+            // Iterate over the vertices.
+            for (var i =0; i < vertices.getLength(); i++) {
+              var xy = vertices.getAt(i);
+              contentString += '<br>' + '<b>Coordenada ' + i + ':</b><br>' + xy.lat() + ',' +
+                  xy.lng();
+            }
+
+            // Replace the info window's content and position.
+            infoWindow.setContent(contentString);
+            infoWindow.setPosition(event.latLng);
+
+            infoWindow.open(map);
+        }
+
+        // Use the DOM setInterval() function to change the offset of the symbol
+        // at fixed intervals.
+        function animateCircleA() {
+            
+            var lineCoordinates = [
+              new google.maps.LatLng(43.260630, -2.954124),
+              new google.maps.LatLng(43.260763, -2.954060),
+              new google.maps.LatLng(43.260841, -2.954199),
+              new google.maps.LatLng(43.260919, -2.954306),
+              new google.maps.LatLng(43.260997, -2.954253),
+              new google.maps.LatLng(43.261091, -2.954167),
+              new google.maps.LatLng(43.261208, -2.954049),
+              new google.maps.LatLng(43.261505, -2.954446),
+              new google.maps.LatLng(43.261708, -2.954650),
+              new google.maps.LatLng(43.261880, -2.954618),
+              new google.maps.LatLng(43.262185, -2.954285),
+              new google.maps.LatLng(43.262247, -2.954382),
+              new google.maps.LatLng(43.262372, -2.954532)
+            ];
+
+            // point distances from beginning in %
+            var sphericalLib = google.maps.geometry.spherical;
+
+            pointDistances = [];
+            var pointZero = lineCoordinates[0];
+            var wholeDist = sphericalLib.computeDistanceBetween(
+                                pointZero,
+                                lineCoordinates[lineCoordinates.length - 1]);
+            
+            for (var i = 0; i < lineCoordinates.length; i++) {
+                pointDistances[i] = 100 * sphericalLib.computeDistanceBetween(
+                                                lineCoordinates[i], pointZero) / wholeDist;
+                console.log('pointDistances[' + i + ']: ' + pointDistances[i]);
+            }
+
+
+
+
+            // Define the symbol, using one of the predefined paths ('CIRCLE')
+            // supplied by the Google Maps JavaScript API.
+            var lineSymbol = {
+              path: google.maps.SymbolPath.CIRCLE,
+              scale: 8,
+              strokeColor: '#000000',
+            };
+
+            // Create the polyline and add the symbol to it via the 'icons' property.
+            line = new google.maps.Polyline({
+              path: lineCoordinates,
+              icons: [{
+                icon: lineSymbol,
+                offset: '100%'
+              }],
+              map: map
+            });
+
+
+            var count = 0;
+            var offset;
+            var sentiel = -1;
+            
+            id = window.setInterval(function () {
+                count = (count + 1) % 200;
+                offset = count /2;
+                
+                for (var i = pointDistances.length - 1; i > sentiel; i--) {
+                    if (offset > pointDistances[i]) {
+                        //console.log('create marker');
+                        var marker = new google.maps.Marker({
+                            icon: {
+                                url:"images/measle_blue.png",
+                                size: new google.maps.Size(7,7),
+                                anchor: new google.maps.Point(4,4)
+                            },
+                            position: line.getPath().getAt(i),
+                            title: line.getPath().getAt(i).toUrlValue(6),
+                            map: map
+                        });
+
+                        if (google.maps.geometry.poly.containsLocation(
+                                new google.maps.LatLng(line.getPath().getAt(i).toUrlValue(6)), edifA)) 
+                            {
+                              $("#eventos").html(line.getPath().getAt(i).toUrlValue(6));
+                              $("#eventos").html("El usuario ha entrado al <b>Edificio A.</");
+                            }
+                        else {
+                              $("#eventos").append("Se encuentra fuera del <b>Edificio A</b>.<br>");
+                        }
+
+                        sentiel++;
+                        break;
+                    }
+                    
+                    //$("#eventos").html("<b>Posición Actual: </b>" + line.getPath().getAt(i).toUrlValue(6));
+                    //$("#eventos").append(pointDistances[i] + "<br>");
+                }
+                
+                // we have only one icon
+                var icons = line.get('icons');
+                icons[0].offset = (offset) + '%';
+                line.set('icons', icons);
+                
+                if (line.get('icons')[0].offset == "99.5%") {
+                    icons[0].offset = '100%';
+                    line.set('icons', icons);
+                    window.clearInterval(id);
+                    //$("#eventos").empty();
+                    //$("#coordenadas").show(); 
+                }
+                
+            }, 20);
+
+            $("#startA").hide();
+            $("#volver").show();
+
+            //Escribimos en el DIV de la derecha las coordenadas del edificio A.
+            $("#coordenadas").append("Las coordenadas del <b>Edificio A</b> son: <br><br>" );
+            // Iterate over the vertices.
+            for (var i =0; i < edifAcoords.length; i++) {
+              $("#coordenadas").append('<b>Coordenada ' + (i+1) + ':</b> ' + edifAcoords[i] + '<br>');
+            }
+
+          }
+
+
+        // Use the DOM setInterval() function to change the offset of the symbol
+        // at fixed intervals.
+        function animateCircleB() {
+            
+            var lineCoordinates = [
+              new google.maps.LatLng(43.260630, -2.954124),
+              new google.maps.LatLng(43.260677, -2.954060),
+              new google.maps.LatLng(43.260802, -2.954113),
+              new google.maps.LatLng(43.260950, -2.954339),
+              new google.maps.LatLng(43.261224, -2.954060),
+              new google.maps.LatLng(43.261083, -2.953802),
+              new google.maps.LatLng(43.260871, -2.953462),
+              new google.maps.LatLng(43.261064, -2.953113),
+              new google.maps.LatLng(43.260822, -2.952689),
+              new google.maps.LatLng(43.260838, -2.952614),
+              new google.maps.LatLng(43.261125, -2.952279),
+              new google.maps.LatLng(43.260930, -2.952022)
+            ];
+
+
+            // point distances from beginning in %
+            var sphericalLib = google.maps.geometry.spherical;
+
+            pointDistances = [];
+            var pointZero = lineCoordinates[0];
+            var wholeDist = sphericalLib.computeDistanceBetween(
+                                pointZero,
+                                lineCoordinates[lineCoordinates.length - 1]);
+            
+            for (var i = 0; i < lineCoordinates.length; i++) {
+                pointDistances[i] = 100 * sphericalLib.computeDistanceBetween(
+                                                lineCoordinates[i], pointZero) / wholeDist;
+                console.log('pointDistances[' + i + ']: ' + pointDistances[i]);
+            }
+
+
+            // Define the symbol, using one of the predefined paths ('CIRCLE')
+            // supplied by the Google Maps JavaScript API.
+            var lineSymbol = {
+              path: google.maps.SymbolPath.CIRCLE,
+              scale: 8,
+              strokeColor: '#393'
+            };
+
+            // Create the polyline and add the symbol to it via the 'icons' property.
+            line = new google.maps.Polyline({
+              path: lineCoordinates,
+              icons: [{
+                icon: lineSymbol,
+                offset: '100%'
+              }],
+              map: map
+            });
+
+            var count = 0;
+            var offset;
+            var sentiel = -1;
+            
+            id = window.setInterval(function () {
+                count = (count + 1) % 200;
+                offset = count /2;
+                
+                for (var i = pointDistances.length - 1; i > sentiel; i--) {
+                    if (offset > pointDistances[i]) {
+                        //console.log('create marker');
+                        var marker = new google.maps.Marker({
+                            icon: {
+                                url:"images/measle_blue.png",
+                                size: new google.maps.Size(7,7),
+                                anchor: new google.maps.Point(4,4)
+                            },
+                            position: line.getPath().getAt(i),
+                            title: line.getPath().getAt(i).toUrlValue(6),
+                            map: map
+                        });
+
+                        sentiel++;
+                        break;
+                    }
+                    
+                    if (google.maps.geometry.poly.containsLocation(
+                            new google.maps.LatLng(line.getPath().getAt(i).toUrlValue(6)), edifB)) 
+                        {
+                          //$("#eventos").html(line.getPath().getAt(i).toUrlValue(6));
+                          $("#eventos").html("<p>El usuario ha entrado al <b>Edificio A.</b></p>");
+                        }
+
+                    else {
+                              $("#eventos").append("Se encuentra fuera del <b>Edificio A</b>.<br>");
+                        }
+                    
+                    //$("#eventos").html("<b>Posición Actual: </b>" + line.getPath().getAt(i).toUrlValue(6));
+                    //$("#eventos").append(pointDistances[i] + "<br>");
+                }
+                
+                // we have only one icon
+                var icons = line.get('icons');
+                icons[0].offset = (offset) + '%';
+                line.set('icons', icons);
+                
+                if (line.get('icons')[0].offset == "99.5%") {
+                    icons[0].offset = '100%';
+                    line.set('icons', icons);
+                    window.clearInterval(id);
+                    $("#eventos").empty();
+                    $("#coordenadas").show(); 
+                }
+                
+            }, 20);
+
+            $("#startB").hide();
+            $("#volver").show();
+
+            //Escribimos en el DIV de la derecha las coordenadas del edificio A.
+            $("#coordenadas").append("Las coordenadas del <b>Edificio B</b> son: <br><br>");
+            // Iterate over the vertices.
+            for (var i =0; i < edifBcoords.length; i++) {
+              $("#coordenadas").append('<b>Coordenada ' + (i+1) + ':</b> ' + edifBcoords[i] + '<br>');
+            }
+        }// Fin de la función animateCircleB()
+    
+        function volver() {
+
+          //Borramos la linea.
+          edifA.setMap(null);
+          edifB.setMap(null);
+          line.setMap(null);
+
+          $("#coordenadas").empty();
+          $("#eventos").empty();
+          $("#edificioA").show();
+          $("#edificioB").show();
+          $("#divStart").hide();
+          initialize();
+        }
+
+    }); // Fin del $(documento).ready()
+
+
+
+    </script>
+  </head>
+  <body>
+    <div id="wrap">
+        <div class="left">
+            <div id="map-canvas"></div>
+        </div>
+
+        <div class="right" id='container'>  
+            <u><h2>Nextel GeoLocation Simulation</h2></u>
+
+            <p>Selecciona el edificio al que quieres acceder: </p>
+            <button id="edificioA">Edificio A</button>
+            <button id="edificioB">Edificio B</button>
+            
+            <div id="divStart">
+                <p>Para simular el acceso al Edificio pulsa <b>Start</b>:</p>
+                <button class="button" id="startA">Start</button>
+                <button class="button" id="startB">Start</button>
+                <button class="button" id="volver">Volver</button> 
+            </div> 
+            <br>
+            <div id="coordenadas"></div>
+            <div id="eventos"></div>
+             
+        </div>
+    </div>
+  </body>
+</html>
+
