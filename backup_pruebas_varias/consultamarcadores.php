@@ -1,6 +1,6 @@
 <?php
 $host = "localhost";
-$user = "hidden";
+$user = "";
 $pass = "";
 
 $databaseName = "database";
